@@ -40,6 +40,7 @@ rand_chacha.workspace = true
 url = { workspace = true, features = ["serde"] }
 x509-parser = "0.16"
 der-parser = "9.0"
+once_cell = "1.21.3"
 uuid = { workspace = true, features = ["serde"] }
 
 [dev-dependencies]

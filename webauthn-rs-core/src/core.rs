@@ -630,7 +630,7 @@ impl WebauthnCore {
             AttestationFormat::AndroidSafetyNet => {
                 return Err(WebauthnError::AttestationNotSupported)
             }
-            AttestationFormat::None => (ParsedAttestationData::None, AttestationMetadata::None),
+            AttestationFormat::None => (AttestationData::None, AttestationMetadata::None),
         };
 
         let credential: Credential = Credential::new(
@@ -638,7 +638,7 @@ impl WebauthnCore {
             &data.attestation_object.auth_data,
             COSEKey::try_from(&acd.credential_pk)?,
             policy,
-            ParsedAttestation {
+            Attestation {
                 data: attestation_data.into(),
                 metadata: attestation_metadata,
             },
@@ -671,7 +671,7 @@ impl WebauthnCore {
         let attested_ca_crt = if let Some(ca_list) = attestation_cas {
             // If given a set of ca's assert that our attestation actually matched one.
             let ca_crt = verify_attestation_ca_chain(
-                &ParsedAttestationData::try_from(credential.attestation.data.clone())?,
+                &credential.attestation.data,
                 ca_list,
                 danger_disable_certificate_time_checks,
             )?;
@@ -1606,8 +1606,8 @@ mod tests {
             backup_state: false,
             registration_policy: UserVerificationPolicy::Discouraged_DO_NOT_USE,
             extensions: RegisteredExtensions::none(),
-            attestation: ParsedAttestation {
-                data: SerializableAttestationData::None,
+            attestation: Attestation {
+                data: AttestationData::None,
                 metadata: AttestationMetadata::None,
             },
             attestation_format: AttestationFormat::None,
@@ -1726,8 +1726,8 @@ mod tests {
             backup_state: false,
             registration_policy: UserVerificationPolicy::Discouraged_DO_NOT_USE,
             extensions: RegisteredExtensions::none(),
-            attestation: ParsedAttestation {
-                data: SerializableAttestationData::None,
+            attestation: Attestation {
+                data: AttestationData::None,
                 metadata: AttestationMetadata::None,
             },
             attestation_format: AttestationFormat::None,
@@ -2844,8 +2844,8 @@ mod tests {
                 backup_state: false,
                 registration_policy: UserVerificationPolicy::Discouraged_DO_NOT_USE,
                 extensions: RegisteredExtensions::none(),
-                attestation: ParsedAttestation {
-                    data: SerializableAttestationData::None,
+                attestation: Attestation {
+                    data: AttestationData::None,
                     metadata: AttestationMetadata::None,
                 },
                 attestation_format: AttestationFormat::None,
@@ -2883,8 +2883,8 @@ mod tests {
                 backup_state: false,
                 registration_policy: UserVerificationPolicy::Required,
                 extensions: RegisteredExtensions::none(),
-                attestation: ParsedAttestation {
-                    data: SerializableAttestationData::None,
+                attestation: Attestation {
+                    data: AttestationData::None,
                     metadata: AttestationMetadata::None,
                 },
                 attestation_format: AttestationFormat::None,
@@ -3477,7 +3477,7 @@ mod tests {
         let cred = result.unwrap();
         assert!(matches!(
             cred.attestation.data,
-            SerializableAttestationData::Self_
+            AttestationData::Self_
         ));
     }
 

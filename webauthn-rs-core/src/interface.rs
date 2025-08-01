@@ -19,8 +19,10 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use rkyv::{Archive, Serialize as RkyvSerialize, Deserialize as RkyvDeserialize};
 use std::collections::BTreeMap;
-
+use once_cell::sync::OnceCell;
 use openssl::{bn, ec, nid, pkey, x509};
+use openssl::x509::X509;
+use rkyv::with::Skip;
 use uuid::Uuid;
 
 /// Representation of an AAGUID
@@ -293,7 +295,7 @@ pub struct CredentialV5 {
     pub extensions: RegisteredExtensions,
     /// The attestation certificate of this credential, including parsed metadata from the
     /// credential.
-    pub attestation: ParsedAttestation,
+    pub attestation: Attestation,
     /// the format of the attestation
     pub attestation_format: AttestationFormat,
 }
@@ -312,7 +314,7 @@ impl Credential {
         // meaningful attestation so we can re-enable it.
         let danger_disable_certificate_time_checks = false;
         verify_attestation_ca_chain(
-            &ParsedAttestationData::try_from(self.attestation.data.clone())?,
+            &self.attestation.data,
             ca_list,
             danger_disable_certificate_time_checks,
         )
@@ -340,8 +342,8 @@ impl From<CredentialV3> for Credential {
             backup_state: false,
             registration_policy,
             extensions: RegisteredExtensions::none(),
-            attestation: ParsedAttestation {
-                data: SerializableAttestationData::None,
+            attestation: Attestation {
+                data: AttestationData::None,
                 metadata: AttestationMetadata::None,
             },
             attestation_format: AttestationFormat::None,
@@ -395,6 +397,51 @@ pub enum SerializableAttestationData {
     Uncertain,
 }
 
+#[derive(Clone, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
+pub struct SerializedAndParsedX509 {
+    serialized: HumanBinaryData,
+    #[rkyv(with = Skip)]
+    #[serde(skip)]
+    parsed: OnceCell<x509::X509>,
+}
+
+impl SerializedAndParsedX509 {
+    // Assuming a constructor; adjust as needed.
+    pub fn new(serialized: HumanBinaryData) -> Self {
+        Self {
+            serialized,
+            parsed: OnceCell::new(),
+        }
+    }
+
+    pub fn serialized(self) -> HumanBinaryData {
+        self.serialized
+    }
+
+    pub fn parsed(&self) -> &x509::X509 {
+        let result = self.parsed.get_or_init(|| {
+            x509::X509::from_der(self.serialized.as_slice()).expect("X509 should always be deserializable!")
+        });
+
+        result
+    }
+}
+impl From<x509::X509> for SerializedAndParsedX509 {
+    fn from(x509: X509) -> Self {
+        let data = HumanBinaryData::from(x509.to_der().expect("Invalid DER"));
+        Self {
+            serialized: data,
+            parsed: OnceCell::from(x509)
+        }
+    }
+}
+
+impl fmt::Debug for SerializedAndParsedX509 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "SerializableAndParsedX509")
+    }
+}
+
 impl fmt::Debug for SerializableAttestationData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -419,17 +466,17 @@ impl fmt::Debug for SerializableAttestationData {
 
 /// The processed attestation and its metadata
 #[derive(Debug, Clone, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
-pub struct ParsedAttestation {
+pub struct Attestation {
     /// the attestation chain data
-    pub data: SerializableAttestationData,
+    pub data: AttestationData,
     /// possible metadata (i.e. flags set) about the attestation
     pub metadata: AttestationMetadata,
 }
 
-impl Default for ParsedAttestation {
+impl Default for Attestation {
     fn default() -> Self {
-        ParsedAttestation {
-            data: SerializableAttestationData::None,
+        Attestation {
+            data: AttestationData::None,
             metadata: AttestationMetadata::None,
         }
     }
@@ -481,24 +528,20 @@ pub enum AttestationMetadata {
 }
 
 /// The processed Attestation that the Authenticator is providing in its AttestedCredentialData
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(
-    try_from = "SerializableAttestationData",
-    into = "SerializableAttestationData"
-)]
-pub enum ParsedAttestationData {
+#[derive(Debug, Clone, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
+pub enum AttestationData {
     /// The credential is authenticated by a signing X509 Certificate
     /// from a vendor or provider.
-    Basic(Vec<x509::X509>),
+    Basic(Vec<SerializedAndParsedX509>),
     /// The credential is authenticated using surrogate basic attestation
     /// it uses the credential private key to create the attestation signature
     Self_,
     /// The credential is authenticated using a CA, and may provide a
     /// ca chain to validate to its root.
-    AttCa(Vec<x509::X509>),
+    AttCa(Vec<SerializedAndParsedX509>),
     /// The credential is authenticated using an anonymization CA, and may provide a ca chain to
     /// validate to its root.
-    AnonCa(Vec<x509::X509>),
+    AnonCa(Vec<SerializedAndParsedX509>),
     /// Unimplemented
     ECDAA,
     /// No Attestation type was provided with this Credential. If in doubt
@@ -507,78 +550,6 @@ pub enum ParsedAttestationData {
     /// Uncertain Attestation was provided with this Credential, which may not
     /// be trustworthy in all cases. If in doubt, reject this type.
     Uncertain,
-}
-
-
-#[allow(clippy::from_over_into)]
-impl Into<SerializableAttestationData> for ParsedAttestationData {
-    fn into(self) -> SerializableAttestationData {
-        match self {
-            ParsedAttestationData::Basic(chain) => SerializableAttestationData::Basic(
-                chain
-                    .into_iter()
-                    .map(|c| HumanBinaryData::from(c.to_der().expect("Invalid DER")))
-                    .collect(),
-            ),
-            ParsedAttestationData::Self_ => SerializableAttestationData::Self_,
-            ParsedAttestationData::AttCa(chain) => SerializableAttestationData::AttCa(
-                // HumanBinaryData::from(c.to_der().expect("Invalid DER")),
-                chain
-                    .into_iter()
-                    .map(|c| HumanBinaryData::from(c.to_der().expect("Invalid DER")))
-                    .collect(),
-            ),
-            ParsedAttestationData::AnonCa(chain) => SerializableAttestationData::AnonCa(
-                // HumanBinaryData::from(c.to_der().expect("Invalid DER")),
-                chain
-                    .into_iter()
-                    .map(|c| HumanBinaryData::from(c.to_der().expect("Invalid DER")))
-                    .collect(),
-            ),
-            ParsedAttestationData::ECDAA => SerializableAttestationData::ECDAA,
-            ParsedAttestationData::None => SerializableAttestationData::None,
-            ParsedAttestationData::Uncertain => SerializableAttestationData::Uncertain,
-        }
-    }
-}
-
-impl TryFrom<SerializableAttestationData> for ParsedAttestationData {
-    type Error = WebauthnError;
-
-    fn try_from(data: SerializableAttestationData) -> Result<Self, Self::Error> {
-        Ok(match data {
-            SerializableAttestationData::Basic(chain) => ParsedAttestationData::Basic(
-                chain
-                    .into_iter()
-                    .map(|c| {
-                        x509::X509::from_der(c.as_slice()).map_err(WebauthnError::OpenSSLError)
-                    })
-                    .collect::<WebauthnResult<_>>()?,
-            ),
-            SerializableAttestationData::Self_ => ParsedAttestationData::Self_,
-            SerializableAttestationData::AttCa(chain) => ParsedAttestationData::AttCa(
-                // x509::X509::from_der(&c.0).map_err(WebauthnError::OpenSSLError)?,
-                chain
-                    .into_iter()
-                    .map(|c| {
-                        x509::X509::from_der(c.as_slice()).map_err(WebauthnError::OpenSSLError)
-                    })
-                    .collect::<WebauthnResult<_>>()?,
-            ),
-            SerializableAttestationData::AnonCa(chain) => ParsedAttestationData::AnonCa(
-                // x509::X509::from_der(&c.0).map_err(WebauthnError::OpenSSLError)?,
-                chain
-                    .into_iter()
-                    .map(|c| {
-                        x509::X509::from_der(c.as_slice()).map_err(WebauthnError::OpenSSLError)
-                    })
-                    .collect::<WebauthnResult<_>>()?,
-            ),
-            SerializableAttestationData::ECDAA => ParsedAttestationData::ECDAA,
-            SerializableAttestationData::None => ParsedAttestationData::None,
-            SerializableAttestationData::Uncertain => ParsedAttestationData::Uncertain,
-        })
-    }
 }
 
 /// Marker type parameter for data related to registration ceremony

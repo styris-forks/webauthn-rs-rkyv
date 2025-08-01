@@ -1,7 +1,7 @@
 //! Serializable formats of attested ssh keys
 
 use serde::{Deserialize, Serialize};
-use webauthn_rs_core::proto::{AttestationFormat, ParsedAttestation, RegisteredExtensions};
+use webauthn_rs_core::proto::{AttestationFormat, Attestation, RegisteredExtensions};
 
 pub use sshkeys::PublicKey;
 
@@ -15,7 +15,7 @@ pub struct AttestedPublicKey {
     /// be used in future authentication attempts
     pub extensions: RegisteredExtensions,
     /// The parser attestation data
-    pub attestation: ParsedAttestation,
+    pub attestation: Attestation,
     /// The format of the attestation presented by the device.
     pub attestation_format: AttestationFormat,
 }

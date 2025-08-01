@@ -127,7 +127,7 @@ impl Credential {
         auth_data: &AuthenticatorData<Registration>,
         ck: COSEKey,
         registration_policy: UserVerificationPolicy,
-        attestation: ParsedAttestation,
+        attestation: Attestation,
         req_extn: &RequestRegistrationExtensions,
         client_extn: &RegistrationExtensionsClientOutputs,
         attestation_format: AttestationFormat,

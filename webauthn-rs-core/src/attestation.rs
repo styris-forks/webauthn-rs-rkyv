@@ -345,7 +345,7 @@ pub(crate) fn verify_packed_attestation(
     acd: &AttestedCredentialData,
     att_obj: &AttestationObject<Registration>,
     client_data_hash: &[u8],
-) -> Result<(ParsedAttestationData, AttestationMetadata), WebauthnError> {
+) -> Result<(AttestationData, AttestationMetadata), WebauthnError> {
     let att_stmt = &att_obj.att_stmt;
     let auth_data_bytes = &att_obj.auth_data_bytes;
 
@@ -389,6 +389,7 @@ pub(crate) fn verify_packed_attestation(
                     cbor_try_bytes!(values)
                         .map_err(|_| WebauthnError::AttestationStatementX5CInvalid)
                         .and_then(|b| x509::X509::from_der(b).map_err(WebauthnError::OpenSSLError))
+                        .map(|x509| SerializedAndParsedX509::from(x509))
                 })
                 .collect();
 
@@ -415,7 +416,7 @@ pub(crate) fn verify_packed_attestation(
                 .get(&serde_cbor_2::Value::Text("sig".to_string()))
                 .ok_or(WebauthnError::AttestationStatementSigMissing)
                 .and_then(|s| cbor_try_bytes!(s))
-                .and_then(|sig| verify_signature(alg, attestn_cert, sig, &verification_data))?;
+                .and_then(|sig| verify_signature(alg, attestn_cert.parsed(), sig, &verification_data))?;
 
             if !is_valid_signature {
                 trace!("packed x509 signature invalid");
@@ -426,13 +427,13 @@ pub(crate) fn verify_packed_attestation(
             // Statement Certificate Requirements.
             // https://w3c.github.io/webauthn/#sctn-packed-attestation-cert-requirements
 
-            assert_packed_attest_req(attestn_cert)?;
+            assert_packed_attest_req(attestn_cert.parsed())?;
 
             // If attestnCert contains an extension with OID 1.3.6.1.4.1.45724.1.1.4
             // (id-fido-gen-ce-aaguid) verify that the value of this extension matches the aaguid
             // in authenticatorData.
 
-            validate_extension::<FidoGenCeAaguid>(attestn_cert, &acd.aaguid)?;
+            validate_extension::<FidoGenCeAaguid>(attestn_cert.parsed(), &acd.aaguid)?;
 
             // Optionally, inspect x5c and consult externally provided knowledge to determine
             // whether attStmt conveys a Basic or AttCA attestation.
@@ -441,7 +442,7 @@ pub(crate) fn verify_packed_attestation(
             // Basic, AttCA or uncertainty, and attestation trust path x5c.
 
             Ok((
-                ParsedAttestationData::Basic(arr_x509),
+                AttestationData::Basic(arr_x509),
                 AttestationMetadata::Packed {
                     aaguid: Uuid::from_bytes(acd.aaguid),
                 },
@@ -481,7 +482,7 @@ pub(crate) fn verify_packed_attestation(
             }
 
             // 4.c. If successful, return implementation-specific values representing attestation type Self and an empty attestation trust path.
-            Ok((ParsedAttestationData::Self_, AttestationMetadata::None))
+            Ok((AttestationData::Self_, AttestationMetadata::None))
         }
     }
 }
@@ -579,7 +580,7 @@ pub(crate) fn verify_fidou2f_attestation(
     acd: &AttestedCredentialData,
     att_obj: &AttestationObject<Registration>,
     client_data_hash: &[u8],
-) -> Result<ParsedAttestationData, WebauthnError> {
+) -> Result<AttestationData, WebauthnError> {
     let att_stmt = &att_obj.att_stmt;
 
     // Verify that attStmt is valid CBOR conforming to the syntax defined above and perform CBOR decoding on it to extract the contained fields.
@@ -619,7 +620,7 @@ pub(crate) fn verify_fidou2f_attestation(
         .map(|att_cert_bytes| {
             cbor_try_bytes!(att_cert_bytes).and_then(|att_cert| {
                 x509::X509::from_der(att_cert.as_slice()).map_err(WebauthnError::OpenSSLError)
-            })
+            }).map(|x509| SerializedAndParsedX509::from(x509))
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -655,14 +656,14 @@ pub(crate) fn verify_fidou2f_attestation(
         .collect();
 
     // Verify the sig using verificationData and certificate public key per [SEC1].
-    let verified = verify_signature(alg, cerificate_public_key, sig, &verification_data)?;
+    let verified = verify_signature(alg, cerificate_public_key.parsed(), sig, &verification_data)?;
 
     if !verified {
         error!("signature verification failed!");
         return Err(WebauthnError::AttestationStatementSigInvalid);
     }
 
-    let attestation = ParsedAttestationData::Basic(arr_x509);
+    let attestation = AttestationData::Basic(arr_x509);
     // Optionally, inspect x5c and consult externally provided knowledge to determine whether attStmt conveys a Basic or AttCA attestation.
 
     // If successful, return implementation-specific values representing attestation type Basic, AttCA or uncertainty, and attestation trust path x5c.
@@ -675,7 +676,7 @@ pub(crate) fn verify_tpm_attestation(
     acd: &AttestedCredentialData,
     att_obj: &AttestationObject<Registration>,
     client_data_hash: &[u8],
-) -> Result<(ParsedAttestationData, AttestationMetadata), WebauthnError> {
+) -> Result<(AttestationData, AttestationMetadata), WebauthnError> {
     debug!("begin verify_tpm_attest");
 
     let att_stmt = &att_obj.att_stmt;
@@ -766,6 +767,7 @@ pub(crate) fn verify_tpm_attestation(
             cbor_try_bytes!(values)
                 .map_err(|_| WebauthnError::AttestationStatementX5CInvalid)
                 .and_then(|b| x509::X509::from_der(b).map_err(WebauthnError::OpenSSLError))
+                .map(|x509| SerializedAndParsedX509::from(x509))
         })
         .collect();
 
@@ -907,7 +909,7 @@ pub(crate) fn verify_tpm_attestation(
         TpmtSignature::RawSignature(dsig) => {
             // Alg was pre-loaded into the x509 struct during parsing
             // so we should just be able to verify
-            verify_signature(alg, aik_cert, &dsig, certinfo_bytes)?
+            verify_signature(alg, aik_cert.parsed(), &dsig, certinfo_bytes)?
         }
     };
 
@@ -919,17 +921,17 @@ pub(crate) fn verify_tpm_attestation(
 
     // Verify that aik_cert meets the requirements in § 8.3.1 TPM Attestation Statement Certificate
     // Requirements.
-    assert_tpm_attest_req(aik_cert)?;
+    assert_tpm_attest_req(aik_cert.parsed())?;
 
     // If aik_cert contains an extension with OID 1 3 6 1 4 1 45724 1 1 4 (id-fido-gen-ce-aaguid)
     // verify that the value of this extension matches the aaguid in authenticatorData.
 
-    validate_extension::<FidoGenCeAaguid>(aik_cert, &acd.aaguid)?;
+    validate_extension::<FidoGenCeAaguid>(aik_cert.parsed(), &acd.aaguid)?;
 
     // If successful, return implementation-specific values representing attestation type AttCA
     // and attestation trust path x5c.
     Ok((
-        ParsedAttestationData::AttCa(arr_x509),
+        AttestationData::AttCa(arr_x509),
         AttestationMetadata::Tpm {
             aaguid: Uuid::from_bytes(acd.aaguid),
             firmware_version: certinfo.firmware_version,
@@ -1025,7 +1027,7 @@ pub(crate) fn verify_apple_anonymous_attestation(
     acd: &AttestedCredentialData,
     att_obj: &AttestationObject<Registration>,
     client_data_hash: &[u8],
-) -> Result<(ParsedAttestationData, AttestationMetadata), WebauthnError> {
+) -> Result<(AttestationData, AttestationMetadata), WebauthnError> {
     let att_stmt = &att_obj.att_stmt;
     let auth_data_bytes = &att_obj.auth_data_bytes;
 
@@ -1051,6 +1053,7 @@ pub(crate) fn verify_apple_anonymous_attestation(
             cbor_try_bytes!(values)
                 .map_err(|_| WebauthnError::AttestationStatementX5CInvalid)
                 .and_then(|b| x509::X509::from_der(b).map_err(WebauthnError::OpenSSLError))
+                .map(|x509| SerializedAndParsedX509::from(x509))
         })
         .collect();
 
@@ -1073,10 +1076,10 @@ pub(crate) fn verify_apple_anonymous_attestation(
 
     // 4. Verify that nonce equals the value of the extension with OID ( 1.2.840.113635.100.8.2 ) in credCert. The nonce here is used to prove that the attestation is live and to protect the integrity of the authenticatorData and the client data.
 
-    validate_extension::<AppleAnonymousNonce>(attestn_cert, &nonce)?;
+    validate_extension::<AppleAnonymousNonce>(attestn_cert.parsed(), &nonce)?;
 
     // 5. Verify credential public key matches the Subject Public Key of credCert.
-    let subject_public_key = COSEKey::try_from((alg, attestn_cert))?;
+    let subject_public_key = COSEKey::try_from((alg, attestn_cert.parsed()))?;
 
     if credential_public_key != subject_public_key {
         return Err(WebauthnError::AttestationCredentialSubjectKeyMismatch);
@@ -1084,7 +1087,7 @@ pub(crate) fn verify_apple_anonymous_attestation(
 
     // 6. If successful, return implementation-specific values representing attestation type Anonymous CA and attestation trust path x5c.
     Ok((
-        ParsedAttestationData::AnonCa(arr_x509),
+        AttestationData::AnonCa(arr_x509),
         AttestationMetadata::None,
     ))
 }
@@ -1094,7 +1097,7 @@ pub(crate) fn verify_android_key_attestation(
     acd: &AttestedCredentialData,
     att_obj: &AttestationObject<Registration>,
     client_data_hash: &[u8],
-) -> Result<(ParsedAttestationData, AttestationMetadata), WebauthnError> {
+) -> Result<(AttestationData, AttestationMetadata), WebauthnError> {
     let att_stmt = &att_obj.att_stmt;
     let auth_data_bytes = &att_obj.auth_data_bytes;
 
@@ -1138,6 +1141,7 @@ pub(crate) fn verify_android_key_attestation(
                 cbor_try_bytes!(values)
                     .map_err(|_| WebauthnError::AttestationStatementX5CInvalid)
                     .and_then(|b| x509::X509::from_der(b).map_err(WebauthnError::OpenSSLError))
+                    .map(|x509| SerializedAndParsedX509::from(x509))
             })
             .collect();
 
@@ -1158,7 +1162,7 @@ pub(crate) fn verify_android_key_attestation(
 
     // 2. Verify that sig is a valid signature over the concatenation of authenticatorData and clientDataHash using the public key in the first certificate in x5c with the algorithm specified in alg.
 
-    let verified = verify_signature(alg, attestn_cert, sig, &data_to_verify)?;
+    let verified = verify_signature(alg, attestn_cert.parsed(), sig, &data_to_verify)?;
 
     if !verified {
         error!("signature verification failed!");
@@ -1167,7 +1171,7 @@ pub(crate) fn verify_android_key_attestation(
 
     // 3. Verify that the public key in the first certificate in x5c matches the credentialPublicKey in the attestedCredentialData in authenticatorData.
     let credential_public_key = COSEKey::try_from(&acd.credential_pk)?;
-    let subject_public_key = COSEKey::try_from((credential_public_key.type_, attestn_cert))?;
+    let subject_public_key = COSEKey::try_from((credential_public_key.type_, attestn_cert.parsed()))?;
 
     if credential_public_key != subject_public_key {
         return Err(WebauthnError::AttestationCredentialSubjectKeyMismatch);
@@ -1181,7 +1185,7 @@ pub(crate) fn verify_android_key_attestation(
     // dbg!(std::str::from_utf8(&pem).unwrap());
 
     let meta = validate_extension::<AndroidKeyAttestationExtensionData>(
-        attestn_cert,
+        attestn_cert.parsed(),
         &client_data_hash.to_vec(),
     )?;
 
@@ -1191,12 +1195,12 @@ pub(crate) fn verify_android_key_attestation(
     // });
 
     // 5. If successful, return implementation-specific values representing attestation type Anonymous CA and attestation trust path x5c.
-    Ok((ParsedAttestationData::Basic(arr_x509), meta))
+    Ok((AttestationData::Basic(arr_x509), meta))
 }
 
 /// Verify the attestation chain
 pub fn verify_attestation_ca_chain<'a>(
-    att_data: &'_ ParsedAttestationData,
+    att_data: &'_ AttestationData,
     ca_list: &'a AttestationCaList,
     danger_disable_certificate_time_checks: bool,
 ) -> Result<Option<&'a AttestationCa>, WebauthnError> {
@@ -1207,15 +1211,15 @@ pub fn verify_attestation_ca_chain<'a>(
 
     // Do we have a format we can actually check?
     let fullchain = match att_data {
-        ParsedAttestationData::Basic(chain) => chain,
-        ParsedAttestationData::AttCa(chain) => chain,
-        ParsedAttestationData::AnonCa(chain) => chain,
-        ParsedAttestationData::Self_ | ParsedAttestationData::None => {
+        AttestationData::Basic(chain) => chain,
+        AttestationData::AttCa(chain) => chain,
+        AttestationData::AnonCa(chain) => chain,
+        AttestationData::Self_ | AttestationData::None => {
             // nothing to check
             debug!("No attestation present");
             return Ok(None);
         }
-        ParsedAttestationData::ECDAA | ParsedAttestationData::Uncertain => {
+        AttestationData::ECDAA | AttestationData::Uncertain => {
             debug!("attestation is an unsupported format");
             return Err(WebauthnError::AttestationNotVerifiable);
         }
@@ -1235,7 +1239,7 @@ pub fn verify_attestation_ca_chain<'a>(
 
     for crt in chain.iter() {
         chain_stack
-            .push(crt.clone())
+            .push(crt.parsed().clone())
             .map_err(WebauthnError::OpenSSLError)?;
     }
 
@@ -1263,7 +1267,7 @@ pub fn verify_attestation_ca_chain<'a>(
     // Note this is a result<result ... because the inner .init must return an errorstack
     // for openssl.
     let res: Result<_, _> = ca_ctx
-        .init(&ca_store, leaf, &chain_stack, |ca_ctx_ref| {
+        .init(&ca_store, leaf.parsed(), &chain_stack, |ca_ctx_ref| {
             ca_ctx_ref.verify_cert().map(|_| {
                 // The value as passed in is a boolean that we ignore in favour of the richer error type.
                 let res = ca_ctx_ref.error();

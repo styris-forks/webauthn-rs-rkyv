@@ -6,7 +6,7 @@ use rkyv::{Archive, Serialize as RkyvSerialize, Deserialize as RkyvDeserialize};
 use webauthn_rs_core::error::WebauthnError;
 use webauthn_rs_core::proto::{
     AttestationCa, AttestationCaList, AuthenticationResult, AuthenticationState, COSEAlgorithm,
-    COSEKey, Credential, CredentialID, ParsedAttestation, RegistrationState,
+    COSEKey, Credential, CredentialID, Attestation, RegistrationState,
 };
 
 /// An in progress registration session for a [Passkey].
@@ -199,7 +199,7 @@ impl AttestedPasskey {
     /// Retrieve a reference to the attestation used during this [`Credential`]'s
     /// registration. This can tell you information about the manufacturer and
     /// what type of credential it is.
-    pub fn attestation(&self) -> &ParsedAttestation {
+    pub fn attestation(&self) -> &Attestation {
         &self.cred.attestation
     }
 
@@ -376,7 +376,7 @@ impl SecurityKey {
     /// Retrieve a reference to the attestation used during this [`Credential`]'s
     /// registration. This can tell you information about the manufacturer and
     /// what type of credential it is.
-    pub fn attestation(&self) -> &ParsedAttestation {
+    pub fn attestation(&self) -> &Attestation {
         &self.cred.attestation
     }
 
@@ -503,7 +503,7 @@ impl AttestedResidentKey {
     /// Retrieve a reference to the attestation used during this [`Credential`]'s
     /// registration. This can tell you information about the manufacturer and
     /// what type of credential it is.
-    pub fn attestation(&self) -> &ParsedAttestation {
+    pub fn attestation(&self) -> &Attestation {
         &self.cred.attestation
     }
 

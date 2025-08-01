@@ -220,7 +220,7 @@ pub mod prelude {
     };
     pub use webauthn_rs_core::proto::{
         AttestationMetadata, AuthenticationResult, AuthenticationState, CreationChallengeResponse,
-        CredentialID, ParsedAttestation, ParsedAttestationData, PublicKeyCredential,
+        CredentialID, Attestation, AttestationData, PublicKeyCredential,
         RegisterPublicKeyCredential, RequestChallengeResponse,
     };
     pub use webauthn_rs_core::proto::{
