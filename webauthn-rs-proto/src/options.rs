@@ -1,8 +1,11 @@
 //! Types that define options as to how an authenticator may interact with
 //! with the server.
 
+#![allow(non_camel_case_types)]
+
 use base64urlsafedata::Base64UrlSafeData;
 use serde::{Deserialize, Serialize};
+use rkyv::{Archive, Serialize as RkyvSerialize, Deserialize as RkyvDeserialize};
 use std::fmt::Display;
 use std::{collections::BTreeMap, str::FromStr};
 
@@ -37,8 +40,7 @@ use std::{collections::BTreeMap, str::FromStr};
 /// > tracking of UV during registration through authentication, however preferred can cause
 /// > legitimate credentials to not prompt for UV correctly due to browser perhipheral exchange
 /// > leading Webauthn RS to deny them in what should otherwise be legitimate operations.
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub enum UserVerificationPolicy {
     /// Require user verification bit to be set, and fail the registration or authentication
@@ -120,7 +122,7 @@ pub enum AttestationConveyancePreference {
 }
 
 /// <https://www.w3.org/TR/webauthn/#enumdef-authenticatortransport>
-#[derive(Debug, Serialize, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 #[allow(unused)]
 pub enum AuthenticatorTransport {
@@ -188,7 +190,7 @@ impl AsRef<str> for AuthenticatorTransport {
 /// The type of attestation on the credential
 ///
 /// <https://www.iana.org/assignments/webauthn/webauthn.xhtml>
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, Hash)]
 pub enum AttestationFormat {
     /// Packed attestation
     #[serde(rename = "packed", alias = "Packed")]

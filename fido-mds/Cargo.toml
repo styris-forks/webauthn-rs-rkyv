@@ -23,6 +23,7 @@ compact_jwt.workspace = true
 openssl.workspace = true
 peg = "0.8.1"
 serde.workspace = true
+rkyv.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }

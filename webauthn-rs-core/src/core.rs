@@ -639,7 +639,7 @@ impl WebauthnCore {
             COSEKey::try_from(&acd.credential_pk)?,
             policy,
             ParsedAttestation {
-                data: attestation_data,
+                data: attestation_data.into(),
                 metadata: attestation_metadata,
             },
             req_extn,
@@ -671,7 +671,7 @@ impl WebauthnCore {
         let attested_ca_crt = if let Some(ca_list) = attestation_cas {
             // If given a set of ca's assert that our attestation actually matched one.
             let ca_crt = verify_attestation_ca_chain(
-                &credential.attestation.data,
+                &ParsedAttestationData::try_from(credential.attestation.data.clone())?,
                 ca_list,
                 danger_disable_certificate_time_checks,
             )?;
@@ -1607,7 +1607,7 @@ mod tests {
             registration_policy: UserVerificationPolicy::Discouraged_DO_NOT_USE,
             extensions: RegisteredExtensions::none(),
             attestation: ParsedAttestation {
-                data: ParsedAttestationData::None,
+                data: SerializableAttestationData::None,
                 metadata: AttestationMetadata::None,
             },
             attestation_format: AttestationFormat::None,
@@ -1727,7 +1727,7 @@ mod tests {
             registration_policy: UserVerificationPolicy::Discouraged_DO_NOT_USE,
             extensions: RegisteredExtensions::none(),
             attestation: ParsedAttestation {
-                data: ParsedAttestationData::None,
+                data: SerializableAttestationData::None,
                 metadata: AttestationMetadata::None,
             },
             attestation_format: AttestationFormat::None,
@@ -2845,7 +2845,7 @@ mod tests {
                 registration_policy: UserVerificationPolicy::Discouraged_DO_NOT_USE,
                 extensions: RegisteredExtensions::none(),
                 attestation: ParsedAttestation {
-                    data: ParsedAttestationData::None,
+                    data: SerializableAttestationData::None,
                     metadata: AttestationMetadata::None,
                 },
                 attestation_format: AttestationFormat::None,
@@ -2884,7 +2884,7 @@ mod tests {
                 registration_policy: UserVerificationPolicy::Required,
                 extensions: RegisteredExtensions::none(),
                 attestation: ParsedAttestation {
-                    data: ParsedAttestationData::None,
+                    data: SerializableAttestationData::None,
                     metadata: AttestationMetadata::None,
                 },
                 attestation_format: AttestationFormat::None,
@@ -3477,7 +3477,7 @@ mod tests {
         let cred = result.unwrap();
         assert!(matches!(
             cred.attestation.data,
-            ParsedAttestationData::Self_
+            SerializableAttestationData::Self_
         ));
     }
 

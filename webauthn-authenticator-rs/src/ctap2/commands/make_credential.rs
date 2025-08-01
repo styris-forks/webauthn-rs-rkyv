@@ -49,7 +49,7 @@ impl CBORCommand for MakeCredentialRequest {
 ///
 /// ## Implementation notes
 ///
-/// This needs to be (de)serialisable to/from both `Map<u32, Value>` **and**
+/// This needs to be (de)Serializable to/from both `Map<u32, Value>` **and**
 /// `Map<String, Value>`:
 ///
 /// * The authenticator itself uses a map with `u32` keys. This is needed to get

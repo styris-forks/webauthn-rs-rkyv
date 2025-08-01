@@ -1,6 +1,8 @@
 //! Extended Structs and representations for Webauthn Operations. These types are designed
 //! to allow persistence and should not change.
 
+#![allow(non_camel_case_types, missing_docs)]
+
 use crate::attestation::verify_attestation_ca_chain;
 use crate::error::*;
 pub use crate::internals::AttestationObject;
@@ -15,6 +17,7 @@ use base64urlsafedata::HumanBinaryData;
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use rkyv::{Archive, Serialize as RkyvSerialize, Deserialize as RkyvDeserialize};
 use std::collections::BTreeMap;
 
 use openssl::{bn, ec, nid, pkey, x509};
@@ -65,7 +68,7 @@ impl AuthenticationState {
 
 /// An EDDSACurve identifier. You probably will never need to alter
 /// or use this value, as it is set inside the Credential for you.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub enum EDDSACurve {
     // +---------+-------+----------+------------------------------------+
     // | Name    | Value | Key Type | Description                        |
@@ -97,7 +100,7 @@ impl EDDSACurve {
 
 /// An ECDSACurve identifier. You probably will never need to alter
 /// or use this value, as it is set inside the Credential for you.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub enum ECDSACurve {
     // +---------+-------+----------+------------------------------------+
     // | Name    | Value | Key Type | Description                        |
@@ -140,7 +143,7 @@ impl From<&ECDSACurve> for nid::Nid {
 /// that an authenticator registers, and is used to authenticate the user.
 /// You will likely never need to interact with this value, as it is part of the Credential
 /// API.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct COSEEC2Key {
     /// The curve that this key references.
     pub curve: ECDSACurve,
@@ -169,7 +172,7 @@ impl TryFrom<&COSEEC2Key> for ec::EcKey<pkey::Public> {
 /// that an authenticator registers, and is used to authenticate the user.
 /// You will likely never need to interact with this value, as it is part of the Credential
 /// API.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct COSEOKPKey {
     /// The curve that this key references.
     pub curve: EDDSACurve,
@@ -181,7 +184,7 @@ pub struct COSEOKPKey {
 /// authenticator.
 /// You will likely never need to interact with this value, as it is part of the Credential
 /// API.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct COSERSAKey {
     /// An RSA modulus
     pub n: HumanBinaryData,
@@ -192,7 +195,7 @@ pub struct COSERSAKey {
 /// The type of Key contained within a COSE value. You should never need
 /// to alter or change this type.
 #[allow(non_camel_case_types)]
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub enum COSEKeyType {
     //    +-----------+-------+-----------------------------------------------+
     //    | Name      | Value | Description                                   |
@@ -232,7 +235,7 @@ pub enum COSEKeyTypeId {
 
 /// A COSE Key as provided by the Authenticator. You should never need
 /// to alter or change these values.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct COSEKey {
     /// The type of key that this contains
     pub type_: COSEAlgorithm,
@@ -248,7 +251,7 @@ pub type Credential = CredentialV5;
 
 /// A user's authenticator credential. It contains an id, the public key
 /// and a counter of how many times the authenticator has been used.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct CredentialV5 {
     /// The ID of this credential.
     pub cred_id: CredentialID,
@@ -309,7 +312,7 @@ impl Credential {
         // meaningful attestation so we can re-enable it.
         let danger_disable_certificate_time_checks = false;
         verify_attestation_ca_chain(
-            &self.attestation.data,
+            &ParsedAttestationData::try_from(self.attestation.data.clone())?,
             ca_list,
             danger_disable_certificate_time_checks,
         )
@@ -338,7 +341,7 @@ impl From<CredentialV3> for Credential {
             registration_policy,
             extensions: RegisteredExtensions::none(),
             attestation: ParsedAttestation {
-                data: ParsedAttestationData::None,
+                data: SerializableAttestationData::None,
                 metadata: AttestationMetadata::None,
             },
             attestation_format: AttestationFormat::None,
@@ -374,8 +377,8 @@ pub struct CredentialV3 {
 }
 
 /// Serialised Attestation Data which can be stored in a stable database or similar.
-#[derive(Clone, Serialize, Deserialize)]
-pub enum SerialisableAttestationData {
+#[derive(Clone, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
+pub enum SerializableAttestationData {
     /// See [ParsedAttestationData::Basic]
     Basic(Vec<HumanBinaryData>),
     /// See [ParsedAttestationData::Self_]
@@ -392,33 +395,33 @@ pub enum SerialisableAttestationData {
     Uncertain,
 }
 
-impl fmt::Debug for SerialisableAttestationData {
+impl fmt::Debug for SerializableAttestationData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SerialisableAttestationData::Basic(_) => {
-                write!(f, "SerialisableAttestationData::Basic")
+            SerializableAttestationData::Basic(_) => {
+                write!(f, "SerializableAttestationData::Basic")
             }
-            SerialisableAttestationData::Self_ => write!(f, "SerialisableAttestationData::Self_"),
-            SerialisableAttestationData::AttCa(_) => {
-                write!(f, "SerialisableAttestationData::AttCa")
+            SerializableAttestationData::Self_ => write!(f, "SerializableAttestationData::Self_"),
+            SerializableAttestationData::AttCa(_) => {
+                write!(f, "SerializableAttestationData::AttCa")
             }
-            SerialisableAttestationData::AnonCa(_) => {
-                write!(f, "SerialisableAttestationData::AnonCa")
+            SerializableAttestationData::AnonCa(_) => {
+                write!(f, "SerializableAttestationData::AnonCa")
             }
-            SerialisableAttestationData::ECDAA => write!(f, "SerialisableAttestationData::ECDAA"),
-            SerialisableAttestationData::None => write!(f, "SerialisableAttestationData::None"),
-            SerialisableAttestationData::Uncertain => {
-                write!(f, "SerialisableAttestationData::Uncertain")
+            SerializableAttestationData::ECDAA => write!(f, "SerializableAttestationData::ECDAA"),
+            SerializableAttestationData::None => write!(f, "SerializableAttestationData::None"),
+            SerializableAttestationData::Uncertain => {
+                write!(f, "SerializableAttestationData::Uncertain")
             }
         }
     }
 }
 
 /// The processed attestation and its metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct ParsedAttestation {
     /// the attestation chain data
-    pub data: ParsedAttestationData,
+    pub data: SerializableAttestationData,
     /// possible metadata (i.e. flags set) about the attestation
     pub metadata: AttestationMetadata,
 }
@@ -426,7 +429,7 @@ pub struct ParsedAttestation {
 impl Default for ParsedAttestation {
     fn default() -> Self {
         ParsedAttestation {
-            data: ParsedAttestationData::None,
+            data: SerializableAttestationData::None,
             metadata: AttestationMetadata::None,
         }
     }
@@ -434,7 +437,7 @@ impl Default for ParsedAttestation {
 
 /// The processed Attestation that the Authenticator is providing in its AttestedCredentialData. This
 /// metadata may allow identification of the device and its specific properties.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub enum AttestationMetadata {
     /// no metadata available for this device.
     None,
@@ -480,8 +483,8 @@ pub enum AttestationMetadata {
 /// The processed Attestation that the Authenticator is providing in its AttestedCredentialData
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(
-    try_from = "SerialisableAttestationData",
-    into = "SerialisableAttestationData"
+    try_from = "SerializableAttestationData",
+    into = "SerializableAttestationData"
 )]
 pub enum ParsedAttestationData {
     /// The credential is authenticated by a signing X509 Certificate
@@ -506,44 +509,45 @@ pub enum ParsedAttestationData {
     Uncertain,
 }
 
+
 #[allow(clippy::from_over_into)]
-impl Into<SerialisableAttestationData> for ParsedAttestationData {
-    fn into(self) -> SerialisableAttestationData {
+impl Into<SerializableAttestationData> for ParsedAttestationData {
+    fn into(self) -> SerializableAttestationData {
         match self {
-            ParsedAttestationData::Basic(chain) => SerialisableAttestationData::Basic(
+            ParsedAttestationData::Basic(chain) => SerializableAttestationData::Basic(
                 chain
                     .into_iter()
                     .map(|c| HumanBinaryData::from(c.to_der().expect("Invalid DER")))
                     .collect(),
             ),
-            ParsedAttestationData::Self_ => SerialisableAttestationData::Self_,
-            ParsedAttestationData::AttCa(chain) => SerialisableAttestationData::AttCa(
+            ParsedAttestationData::Self_ => SerializableAttestationData::Self_,
+            ParsedAttestationData::AttCa(chain) => SerializableAttestationData::AttCa(
                 // HumanBinaryData::from(c.to_der().expect("Invalid DER")),
                 chain
                     .into_iter()
                     .map(|c| HumanBinaryData::from(c.to_der().expect("Invalid DER")))
                     .collect(),
             ),
-            ParsedAttestationData::AnonCa(chain) => SerialisableAttestationData::AnonCa(
+            ParsedAttestationData::AnonCa(chain) => SerializableAttestationData::AnonCa(
                 // HumanBinaryData::from(c.to_der().expect("Invalid DER")),
                 chain
                     .into_iter()
                     .map(|c| HumanBinaryData::from(c.to_der().expect("Invalid DER")))
                     .collect(),
             ),
-            ParsedAttestationData::ECDAA => SerialisableAttestationData::ECDAA,
-            ParsedAttestationData::None => SerialisableAttestationData::None,
-            ParsedAttestationData::Uncertain => SerialisableAttestationData::Uncertain,
+            ParsedAttestationData::ECDAA => SerializableAttestationData::ECDAA,
+            ParsedAttestationData::None => SerializableAttestationData::None,
+            ParsedAttestationData::Uncertain => SerializableAttestationData::Uncertain,
         }
     }
 }
 
-impl TryFrom<SerialisableAttestationData> for ParsedAttestationData {
+impl TryFrom<SerializableAttestationData> for ParsedAttestationData {
     type Error = WebauthnError;
 
-    fn try_from(data: SerialisableAttestationData) -> Result<Self, Self::Error> {
+    fn try_from(data: SerializableAttestationData) -> Result<Self, Self::Error> {
         Ok(match data {
-            SerialisableAttestationData::Basic(chain) => ParsedAttestationData::Basic(
+            SerializableAttestationData::Basic(chain) => ParsedAttestationData::Basic(
                 chain
                     .into_iter()
                     .map(|c| {
@@ -551,8 +555,8 @@ impl TryFrom<SerialisableAttestationData> for ParsedAttestationData {
                     })
                     .collect::<WebauthnResult<_>>()?,
             ),
-            SerialisableAttestationData::Self_ => ParsedAttestationData::Self_,
-            SerialisableAttestationData::AttCa(chain) => ParsedAttestationData::AttCa(
+            SerializableAttestationData::Self_ => ParsedAttestationData::Self_,
+            SerializableAttestationData::AttCa(chain) => ParsedAttestationData::AttCa(
                 // x509::X509::from_der(&c.0).map_err(WebauthnError::OpenSSLError)?,
                 chain
                     .into_iter()
@@ -561,7 +565,7 @@ impl TryFrom<SerialisableAttestationData> for ParsedAttestationData {
                     })
                     .collect::<WebauthnResult<_>>()?,
             ),
-            SerialisableAttestationData::AnonCa(chain) => ParsedAttestationData::AnonCa(
+            SerializableAttestationData::AnonCa(chain) => ParsedAttestationData::AnonCa(
                 // x509::X509::from_der(&c.0).map_err(WebauthnError::OpenSSLError)?,
                 chain
                     .into_iter()
@@ -570,9 +574,9 @@ impl TryFrom<SerialisableAttestationData> for ParsedAttestationData {
                     })
                     .collect::<WebauthnResult<_>>()?,
             ),
-            SerialisableAttestationData::ECDAA => ParsedAttestationData::ECDAA,
-            SerialisableAttestationData::None => ParsedAttestationData::None,
-            SerialisableAttestationData::Uncertain => ParsedAttestationData::Uncertain,
+            SerializableAttestationData::ECDAA => ParsedAttestationData::ECDAA,
+            SerializableAttestationData::None => ParsedAttestationData::None,
+            SerializableAttestationData::Uncertain => ParsedAttestationData::Uncertain,
         })
     }
 }

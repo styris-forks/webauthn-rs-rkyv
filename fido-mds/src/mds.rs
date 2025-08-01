@@ -7,6 +7,7 @@
 use compact_jwt::{crypto::JwsX509VerifierBuilder, JwsCompact, JwsVerifier, JwtError};
 use openssl::x509;
 use serde::{Deserialize, Serialize};
+use rkyv::{Archive, Serialize as RkyvSerialize, Deserialize as RkyvDeserialize};
 use std::fmt;
 use std::str::FromStr;
 
@@ -499,7 +500,7 @@ impl fmt::Display for AuthenticatorVersion {
 }
 
 /// The authenticator transports that this device supports
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq)]
 pub enum AuthenticatorTransport {
     /// usb
     #[serde(rename = "usb")]

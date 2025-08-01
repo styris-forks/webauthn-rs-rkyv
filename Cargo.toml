@@ -120,3 +120,5 @@ tungstenite = { version = "^0.24.0", default-features = false, features = [
 ] }
 url = "2"
 uuid = "^1.1.2"
+
+rkyv = { version = "^0.8.11", features = ["bytes-1", "uuid-1"] }

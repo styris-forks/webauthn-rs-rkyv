@@ -1,6 +1,7 @@
 //! Types that are expected to be serialised in applications using [crate::Webauthn]
 
 use serde::{Deserialize, Serialize};
+use rkyv::{Archive, Serialize as RkyvSerialize, Deserialize as RkyvDeserialize};
 
 use webauthn_rs_core::error::WebauthnError;
 use webauthn_rs_core::proto::{
@@ -53,7 +54,7 @@ pub struct PasskeyAuthentication {
 /// and no administration of resident keys may break the device.
 ///
 /// These can be safely serialised and deserialised from a database for persistence.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct Passkey {
     pub(crate) cred: Credential,
 }

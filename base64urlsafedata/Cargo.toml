@@ -17,6 +17,7 @@ repository = { workspace = true }
 
 [dependencies]
 serde.workspace = true
+rkyv.workspace = true
 base64.workspace = true
 pastey = "0.1.0"
 

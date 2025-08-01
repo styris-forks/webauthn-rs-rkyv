@@ -1,6 +1,13 @@
 //! Types related to CBOR Object Signing and Encryption (COSE)
 
 use serde::{Deserialize, Serialize};
+use rkyv::{
+    bytecheck::{CheckBytes, InvalidEnumDiscriminantError, Verify},
+    primitive::ArchivedI32,
+    rancor::{fail, Fallible, Source},
+    traits::NoUndef,
+    Archive, Deserialize as RkyvDeserialize, Place, Portable, Serialize as RkyvSerialize,
+};
 
 /// A COSE signature algorithm, indicating the type of key and hash type
 /// that should be used. You shouldn't need to alter or use this value.
@@ -91,5 +98,82 @@ impl TryFrom<i128> for COSEAlgorithm {
             -65535 => Ok(COSEAlgorithm::INSECURE_RS1),
             _ => Err(()),
         }
+    }
+}
+
+/// Hand-rolled rkyv support for COSEAlgorithm since rkyv does not yet support `#[repr(i32)]`
+#[derive(CheckBytes, Portable)]
+#[bytecheck(crate = rkyv::bytecheck, verify)]
+#[repr(C)]
+pub struct ArchivedCOSEAlgorithm(ArchivedI32);
+
+// Implementation detail: `ArchivedCOSEAlgorithm` has no undef bytes
+unsafe impl NoUndef for ArchivedCOSEAlgorithm {}
+
+impl ArchivedCOSEAlgorithm {
+    // Internal fallible conversion back to the original enum
+    fn try_to_native(&self) -> Option<COSEAlgorithm> {
+        Some(match self.0.to_native() {
+            -7 => COSEAlgorithm::ES256,
+            -35 => COSEAlgorithm::ES384,
+            -36 => COSEAlgorithm::ES512,
+            -257 => COSEAlgorithm::RS256,
+            -258 => COSEAlgorithm::RS384,
+            -259 => COSEAlgorithm::RS512,
+            -37 => COSEAlgorithm::PS256,
+            -38 => COSEAlgorithm::PS384,
+            -39 => COSEAlgorithm::PS512,
+            -8 => COSEAlgorithm::EDDSA,
+            -65535 => COSEAlgorithm::INSECURE_RS1,
+            _ => return None,
+        })
+    }
+
+    // Public infallible conversion back to the original enum
+    pub(crate) fn to_native(&self) -> COSEAlgorithm {
+        unsafe { self.try_to_native().unwrap_unchecked() }
+    }
+}
+
+unsafe impl<C: Fallible + ?Sized> Verify<C> for ArchivedCOSEAlgorithm
+where
+    C::Error: Source,
+{
+    // verify runs after all of the fields have been checked
+    fn verify(&self, _: &mut C) -> Result<(), C::Error> {
+        // Use the internal conversion to try to convert back
+        if self.try_to_native().is_none() {
+            // Return an error if it fails (i.e. the discriminant did not match
+            // any valid discriminants)
+            fail!(InvalidEnumDiscriminantError {
+                enum_name: "ArchivedCOSEAlgorithm",
+                invalid_discriminant: self.0.to_native(),
+            })
+        }
+        Ok(())
+    }
+}
+
+impl Archive for COSEAlgorithm {
+    type Archived = ArchivedCOSEAlgorithm;
+    type Resolver = ();
+
+    fn resolve(&self, _: Self::Resolver, out: Place<Self::Archived>) {
+        // Convert COSEAlgorithm -> u16 -> ArchivedU16 and write to `out`
+        out.write(ArchivedCOSEAlgorithm((*self as i32).into()));
+    }
+}
+
+// Serialization is a no-op because there's no out-of-line data
+impl<S: Fallible + ?Sized> RkyvSerialize<S> for COSEAlgorithm {
+    fn serialize(&self, _: &mut S) -> Result<Self::Resolver, <S as Fallible>::Error> {
+        Ok(())
+    }
+}
+
+// Deserialization just calls the public conversion and returns the result
+impl<D: Fallible + ?Sized> RkyvDeserialize<COSEAlgorithm, D> for ArchivedCOSEAlgorithm {
+    fn deserialize(&self, _: &mut D) -> Result<COSEAlgorithm, <D as Fallible>::Error> {
+        Ok(self.to_native())
     }
 }

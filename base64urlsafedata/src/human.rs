@@ -3,6 +3,7 @@ use std::fmt;
 use crate::{Base64UrlSafeData, URL_SAFE_NO_PAD};
 use base64::Engine;
 use serde::{Serialize, Serializer};
+use rkyv::{Archive, Serialize as RkyvSerialize, Deserialize as RkyvDeserialize};
 
 /// Serde wrapper for `Vec<u8>` which emits URL-safe, non-padded Base64 for
 /// *only* human-readable formats, and accepts Base64 and binary formats.
@@ -17,7 +18,7 @@ use serde::{Serialize, Serializer};
 ///
 /// [0]: https://docs.rs/serde/latest/serde/trait.Serializer.html#method.is_human_readable
 /// [sec5]: https://datatracker.ietf.org/doc/html/rfc4648#section-5
-#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct HumanBinaryData(Vec<u8>);
 
 common_impls!(HumanBinaryData);

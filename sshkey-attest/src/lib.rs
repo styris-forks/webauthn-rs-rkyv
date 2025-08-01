@@ -121,14 +121,14 @@ pub fn verify_fido_sk_ssh_attestation(
     let att_x509 = vec![ssh_sk_attest.att_cert.clone()];
 
     let attestation = ParsedAttestation {
-        data: ParsedAttestationData::Basic(att_x509),
+        data: ParsedAttestationData::Basic(att_x509).into(),
         metadata: AttestationMetadata::Packed {
             aaguid: Uuid::from_bytes(acd.aaguid),
         },
     };
 
     let ca_crt = verify_attestation_ca_chain(
-        &attestation.data,
+        &ParsedAttestationData::try_from(attestation.data.clone())?,
         attestation_cas,
         danger_disable_certificate_time_checks,
     )?;

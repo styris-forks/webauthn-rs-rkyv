@@ -35,6 +35,7 @@ webauthn-rs-core.workspace = true
 url = { workspace = true, features = ["serde"] }
 tracing.workspace = true
 serde.workspace = true
+rkyv.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 
 [dev-dependencies]

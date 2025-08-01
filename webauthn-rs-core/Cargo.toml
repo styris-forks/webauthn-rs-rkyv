@@ -26,6 +26,7 @@ hex.workspace = true
 webauthn-attestation-ca.workspace = true
 webauthn-rs-proto.workspace = true
 serde.workspace = true
+rkyv.workspace = true
 serde_cbor_2.workspace = true
 serde_json.workspace = true
 nom.workspace = true

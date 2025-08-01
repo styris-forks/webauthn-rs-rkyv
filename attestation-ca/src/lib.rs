@@ -28,7 +28,7 @@ impl DeviceDescription {
 
 /// A serialised Attestation CA.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SerialisableAttestationCa {
+pub struct SerializableAttestationCa {
     pub(crate) ca: Base64UrlSafeData,
     pub(crate) aaguids: BTreeMap<Uuid, DeviceDescription>,
     pub(crate) blanket_allow: bool,
@@ -40,8 +40,8 @@ pub struct SerialisableAttestationCa {
 /// of the authenticator that is in use.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(
-    try_from = "SerialisableAttestationCa",
-    into = "SerialisableAttestationCa"
+    try_from = "SerializableAttestationCa",
+    into = "SerializableAttestationCa"
 )]
 pub struct AttestationCa {
     /// The x509 root CA of the attestation chain that a security key will be attested to.
@@ -54,9 +54,9 @@ pub struct AttestationCa {
 }
 
 #[allow(clippy::from_over_into)]
-impl Into<SerialisableAttestationCa> for AttestationCa {
-    fn into(self) -> SerialisableAttestationCa {
-        SerialisableAttestationCa {
+impl Into<SerializableAttestationCa> for AttestationCa {
+    fn into(self) -> SerializableAttestationCa {
+        SerializableAttestationCa {
             ca: Base64UrlSafeData::from(self.ca.to_der().expect("Invalid DER")),
             aaguids: self.aaguids,
             blanket_allow: self.blanket_allow,
@@ -64,10 +64,10 @@ impl Into<SerialisableAttestationCa> for AttestationCa {
     }
 }
 
-impl TryFrom<SerialisableAttestationCa> for AttestationCa {
+impl TryFrom<SerializableAttestationCa> for AttestationCa {
     type Error = OpenSSLErrorStack;
 
-    fn try_from(data: SerialisableAttestationCa) -> Result<Self, Self::Error> {
+    fn try_from(data: SerializableAttestationCa) -> Result<Self, Self::Error> {
         Ok(AttestationCa {
             ca: x509::X509::from_der(data.ca.as_slice())?,
             aaguids: data.aaguids,

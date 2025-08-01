@@ -2,9 +2,10 @@
 
 use base64urlsafedata::Base64UrlSafeData;
 use serde::{Deserialize, Serialize};
+use rkyv::{Archive, Serialize as RkyvSerialize, Deserialize as RkyvDeserialize};
 
 /// Valid credential protection policies
-#[derive(Debug, Serialize, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, Copy, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[repr(u8)]
 pub enum CredentialProtectionPolicy {
@@ -282,7 +283,7 @@ impl From<web_sys::AuthenticationExtensionsClientOutputs>
 }
 
 /// <https://www.w3.org/TR/webauthn-3/#sctn-authenticator-credential-properties-extension>
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Archive, RkyvSerialize, RkyvDeserialize, Clone)]
 pub struct CredProps {
     /// A user agent supplied hint that this credential *may* have created a resident key. It is
     /// retured from the user agent, not the authenticator meaning that this is an unreliable
@@ -363,7 +364,7 @@ impl From<web_sys::AuthenticationExtensionsClientOutputs> for RegistrationExtens
 }
 
 /// The result state of an extension as returned from the authenticator.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub enum ExtnState<T>
 where
     T: Clone + std::fmt::Debug,
@@ -383,7 +384,7 @@ where
 }
 
 /// The set of extensions that were registered by this credential.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct RegisteredExtensions {
     // ⚠️  It's critical we place serde default here so that we
     // can deserialise in the future as we add new types!
