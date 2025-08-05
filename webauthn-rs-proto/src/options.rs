@@ -66,7 +66,7 @@ pub enum UserVerificationPolicy {
 }
 
 /// Relying Party Entity
-#[derive(Debug, Serialize, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct RelyingParty {
     /// The name of the relying party.
@@ -77,7 +77,7 @@ pub struct RelyingParty {
 }
 
 /// User Entity
-#[derive(Debug, Serialize, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     /// The user's id in base64 form. This MUST be a unique id, and
@@ -94,7 +94,7 @@ pub struct User {
 }
 
 /// Public key cryptographic parameters
-#[derive(Debug, Serialize, Clone, Deserialize)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct PubKeyCredParams {
     /// The type of public-key credential.
     #[serde(rename = "type")]
@@ -104,7 +104,7 @@ pub struct PubKeyCredParams {
 }
 
 /// <https://www.w3.org/TR/webauthn/#enumdef-attestationconveyancepreference>
-#[derive(Debug, Serialize, Clone, Deserialize, Default)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum AttestationConveyancePreference {
     /// Do not request attestation.
@@ -238,7 +238,7 @@ impl TryFrom<&str> for AttestationFormat {
 }
 
 /// <https://www.w3.org/TR/webauthn/#dictdef-publickeycredentialdescriptor>
-#[derive(Debug, Serialize, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq)]
 pub struct PublicKeyCredentialDescriptor {
     /// The type of credential
     #[serde(rename = "type")]
@@ -255,7 +255,7 @@ pub struct PublicKeyCredentialDescriptor {
 /// to help a user select a relevant authenticator type.
 ///
 /// <https://www.w3.org/TR/webauthn/#attachment>
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq)]
 pub enum AuthenticatorAttachment {
     /// Request a device that is part of the machine aka inseperable.
     /// <https://www.w3.org/TR/webauthn/#attachment>
@@ -270,7 +270,7 @@ pub enum AuthenticatorAttachment {
 /// A hint as to the class of device that is expected to fufil this operation.
 ///
 /// <https://www.w3.org/TR/webauthn-3/#enumdef-publickeycredentialhints>
-#[derive(Debug, Serialize, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 #[allow(unused)]
 pub enum PublicKeyCredentialHints {
@@ -285,7 +285,7 @@ pub enum PublicKeyCredentialHints {
 /// The Relying Party's requirements for client-side discoverable credentials.
 ///
 /// <https://www.w3.org/TR/webauthn-2/#enumdef-residentkeyrequirement>
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub enum ResidentKeyRequirement {
     /// <https://www.w3.org/TR/webauthn-2/#dom-residentkeyrequirement-discouraged>
@@ -299,7 +299,7 @@ pub enum ResidentKeyRequirement {
 }
 
 /// <https://www.w3.org/TR/webauthn/#dictdef-authenticatorselectioncriteria>
-#[derive(Debug, Default, Serialize, Clone, Deserialize)]
+#[derive(Debug, Default, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthenticatorSelectionCriteria {
     /// How the authenticator should be attached to the client machine.
@@ -327,7 +327,7 @@ pub struct AuthenticatorSelectionCriteria {
 }
 
 /// A descriptor of a credential that can be used.
-#[derive(Debug, Serialize, Clone, Deserialize)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct AllowCredentials {
     #[serde(rename = "type")]
     /// The type of credential.

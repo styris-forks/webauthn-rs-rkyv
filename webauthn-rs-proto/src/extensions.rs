@@ -40,7 +40,7 @@ impl TryFrom<u8> for CredentialProtectionPolicy {
 /// The desired options for the client's use of the `credProtect` extension
 ///
 /// <https://fidoalliance.org/specs/fido-v2.1-rd-20210309/fido-client-to-authenticator-protocol-v2.1-rd-20210309.html#sctn-credProtect-extension>
-#[derive(Debug, Serialize, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct CredProtect {
     /// The credential policy to enact
@@ -55,7 +55,7 @@ pub struct CredProtect {
 /// Extension option inputs for PublicKeyCredentialCreationOptions.
 ///
 /// Implements \[AuthenticatorExtensionsClientInputs\] from the spec.
-#[derive(Debug, Serialize, Clone, Deserialize)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RequestRegistrationExtensions {
     /// The `credProtect` extension options
@@ -154,7 +154,7 @@ impl Into<js_sys::Object> for &RequestRegistrationExtensions {
 /// The inputs to the hmac secret if it was created during registration.
 ///
 /// <https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-20210615.html#sctn-hmac-secret-extension>
-#[derive(Debug, Serialize, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct HmacGetSecretInput {
     /// Retrieve a symmetric secrets from the authenticator with this input.
@@ -166,7 +166,7 @@ pub struct HmacGetSecretInput {
 /// Extension option inputs for PublicKeyCredentialRequestOptions
 ///
 /// Implements \[AuthenticatorExtensionsClientInputs\] from the spec
-#[derive(Debug, Serialize, Clone, Deserialize)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RequestAuthenticationExtensions {
     /// The `appid` extension options
