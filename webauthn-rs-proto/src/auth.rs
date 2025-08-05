@@ -118,7 +118,7 @@ impl From<RequestChallengeResponse> for web_sys::CredentialRequestOptions {
 }
 
 /// <https://w3c.github.io/webauthn/#authenticatorassertionresponse>
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Archive, RkyvSerialize, RkyvDeserialize, Clone)]
 pub struct AuthenticatorAssertionResponseRaw {
     /// Raw authenticator data.
     #[serde(rename = "authenticatorData")]
@@ -142,7 +142,7 @@ pub struct AuthenticatorAssertionResponseRaw {
 ///
 /// You should not need to handle the inner content of this structure - you should
 /// provide this to the correctly handling function of Webauthn only.
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Archive, RkyvSerialize, RkyvDeserialize, Clone)]
 pub struct PublicKeyCredential {
     /// The credential Id, likely base64
     pub id: String,

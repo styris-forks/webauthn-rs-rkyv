@@ -225,7 +225,7 @@ impl Into<js_sys::Object> for &RequestAuthenticationExtensions {
 }
 
 /// The response to a hmac get secret request.
-#[derive(Debug, Serialize, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct HmacGetSecretOutput {
     /// Output of HMAC(Salt 1 || Client Secret)
@@ -236,7 +236,7 @@ pub struct HmacGetSecretOutput {
 
 /// <https://w3c.github.io/webauthn/#dictdef-authenticationextensionsclientoutputs>
 /// The default option here for Options are None, so it can be derived
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Archive, RkyvSerialize, RkyvDeserialize, Clone, Default)]
 pub struct AuthenticationExtensionsClientOutputs {
     /// Indicates whether the client used the provided appid extension
     #[serde(default)]
@@ -295,7 +295,7 @@ pub struct CredProps {
 
 /// <https://w3c.github.io/webauthn/#dictdef-authenticationextensionsclientoutputs>
 /// The default option here for Options are None, so it can be derived
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Archive, RkyvSerialize, RkyvDeserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct RegistrationExtensionsClientOutputs {
     /// Indicates whether the client used the provided appid extension

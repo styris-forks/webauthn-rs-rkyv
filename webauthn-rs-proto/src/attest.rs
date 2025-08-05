@@ -124,7 +124,7 @@ impl From<CreationChallengeResponse> for web_sys::CredentialCreationOptions {
 }
 
 /// <https://w3c.github.io/webauthn/#authenticatorattestationresponse>
-#[derive(Debug, Serialize, Clone, Deserialize)]
+#[derive(Debug, Serialize, Clone, Deserialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct AuthenticatorAttestationResponseRaw {
     /// <https://w3c.github.io/webauthn/#dom-authenticatorattestationresponse-attestationobject>
     #[serde(rename = "attestationObject")]
@@ -146,7 +146,7 @@ pub struct AuthenticatorAttestationResponseRaw {
 /// You should not need to handle the inner content of this structure - you should
 /// provide this to the correctly handling function of Webauthn only.
 /// <https://w3c.github.io/webauthn/#iface-pkcredential>
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Archive, RkyvSerialize, RkyvDeserialize)]
 pub struct RegisterPublicKeyCredential {
     /// The id of the PublicKey credential, likely in base64.
     ///
