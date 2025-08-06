@@ -2,7 +2,6 @@
 
 #[cfg(feature = "wasm")]
 use base64::Engine;
-use rkyv::Archive;
 use base64urlsafedata::Base64UrlSafeData;
 use serde::{Deserialize, Serialize};
 use rkyv::{Archive, Serialize as RkyvSerialize, Deserialize as RkyvDeserialize};
